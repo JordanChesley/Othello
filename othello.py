@@ -37,7 +37,7 @@ def set_starting_config():
   WHITE_BOARD[center][center-1] = False
   WHITE_BOARD[center][center] = True
 
-def get(row: int, col: int):
+def get_piece(row: int, col: int):
   if ((row < 0 or row >= BOARD_SIZE) or (col < 0 or col >= BOARD_SIZE)): return None
   return WHITE_BOARD[row][col]
 
@@ -48,8 +48,13 @@ def place(color: bool, row: int, column: int):
   WHITE_BOARD[row][column] = color
   return True
 
-def flip(row: int, column: int):
-  WHITE_BOARD[row][column] = not(WHITE_BOARD[row][column])
+def flip(color: bool, row: int, col: int, row_expr, col_expr):
+  piece = get_piece(row, col)
+  # If it's the same color or non-existent, we cannot flip.
+  if piece == color or piece == None: return False
+
+  # We get here if the piece is the opposite color of the current playing color.
+  WHITE_BOARD[row][col]
 
 def play():
   turn_order = [BLACK, WHITE]
