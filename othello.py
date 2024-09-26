@@ -227,7 +227,7 @@ class Game:
 class Bot:
 
     def __init__(self):
-        self.heatmap =
+        self.heatmap = [[]]
 
     def process_boardstate(self, boardstate):
         pass
