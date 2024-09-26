@@ -1,6 +1,43 @@
+
+
+class Game_Player:
+
+    color = None
+    name = ""
+    score = 0
+
+    def set_color(self, color):
+        self.color = color
+
+
+class Bot (Game_Player):
+
+    def __init__(self, name):
+        self.heatmap = [[5, 2, 4, 3, 3, 4, 2, 5], [2, 1, 2, 2, 2, 2, 1, 2], [4, 2, 3, 1, 1, 3, 2, 4], [3, 2, 1,	1,	1,	1,	2,	3], [
+            3, 2, 1,	1,	1,	1,	2,	3], [4, 2, 3, 1, 1, 3, 2, 4], [2, 1, 2, 2, 2, 2, 1, 2], [5, 2, 4, 3, 3, 4, 2, 5]]
+        self.name = f"Bot {name}"
+        self.score = 0
+
+    def process_boardstate(self, boardstate):
+        pass
+
+    def fitness_function(self, boardstate, heatmap):
+        pass
+
+    def print_heatmap(self):
+        for i in self.heatmap:
+            print(i)
+
+
+class Player(Game_Player):
+    def __init__(self, name):
+        self.name = f"Player {name}"
+        self.score = 0
+
+
 class Game:
 
-    def __init__(self, bot):
+    def __init__(self, Player_A: Game_Player, Player_B: Game_Player):
         # Board configurations.
         self.BOARD_SIZE = 8
 
@@ -12,9 +49,9 @@ class Game:
         self.BLACK = False
 
         # Track player scores.
-        self.SCORE = {}
+        self.players = [Player_A, Player_B]
 
-        # Expresions to apply to board dimensions during scanning tasks.
+        # Expressions to apply to board dimensions during scanning tasks.
         self.EXPRS = ["-1", "+0", "+1"]
 
         self.set_starting_config()
@@ -27,7 +64,7 @@ class Game:
         #    True: ' W'
         #   False: ' B'
         print(
-            f'\nBlack - {self.SCORE[self.BLACK]}    White - {self.SCORE[self.WHITE]}')
+            f'\nBlack - {self.players[0].score}    White - {self.players[1].score}')
         if with_labels:
             print(' ', *range(1, self.BOARD_SIZE + 1))
         for i in range(self.BOARD_SIZE):
@@ -44,7 +81,6 @@ class Game:
 
     def set_starting_config(self):
         # Clear/Set the board and place the initial pieces.
-
         # Clear the board / Set board dimensions.
         self.WHITE_BOARD = [[None for _ in range(self.BOARD_SIZE)]
                             for _ in range(self.BOARD_SIZE)]
@@ -96,8 +132,8 @@ class Game:
             return self.check_playable(color, adj_row, adj_col, row_expr, col_expr, i+1)
 
     def get_playable_spaces(self, color):
-        # Returns all possible moves for the given color
 
+        # Returns all possible moves for the given color
         playable_spaces = []
         # Iterate through our entire board.
         for row in range(self.BOARD_SIZE):
@@ -148,36 +184,35 @@ class Game:
     # We get here if the piece is the opposite color of the current playing color.
 
     def play(self):
-        # Othello Game Loop
 
-        turn_order = [self.BLACK, self.WHITE]
+        # Othello Game Loop
         move = 0
         skipped_turns = 0
 
         while True:
             # If two consecutive turns have been skipped, the game is over; there are no more valid moves.
-            if skipped_turns == 2:
+            if skipped_turns >= 2:
                 print('No more valid moves. Game over!')
                 print(
-                    f'Black - {SCORE[self.BLACK]}    White - {SCORE[self.WHITE]}')
+                    f'Black - {self.players[0].score}    White - {self.players[1].score}')
                 return
 
             # Next color turn.
-            team = turn_order[move % 2]
+            team = self.players[move % 2]
 
             # Scan for possible plays this color can make.
-            playable_spaces = self.get_playable_spaces(team)
+            playable_spaces = self.get_playable_spaces(team.color)
 
             # If no spaces are available to play, skip their turn.
             if len(playable_spaces) == 0:
-                print(f"{self.WHITE} if team else {self.BLACK}: Cannot place piece.")
+                print(
+                    f"{self.players[0].color} if team else {self.players[1].color}: Cannot place piece.")
                 skipped_turns += 1
                 move += 1
                 continue
 
             # Print the board.
             self.print_board(playable_spaces, with_labels=True)
-
             # Get input.
             row = -1
             column = -1
@@ -224,18 +259,18 @@ class Game:
             move += 1
 
 
-class Bot:
-
-    def __init__(self):
-        self.heatmap = [[]]
-
-    def process_boardstate(self, boardstate):
-        pass
-
-    def fitness_function(self, boardstate, heatmap):
-        pass
-
-
+# On Game Start User Picks A and B, They Then Game. If No Player is selected, the bots will play against each other.
 if __name__ == "__main__":
-    bot = Bot()
-    newGame = Game(bot)
+    Player_A = input("Player A: (1) Bot, (2) Person")
+    if int(Player_A) == 1:
+        Player_A = Bot("A")
+    else:
+        Player_A = Player("A")
+
+    Player_B = input("Player A: (1) Bot, (2) Person")
+    if int(Player_B) == 1:
+        Player_B = Bot("B")
+    else:
+        Player_B = Player("B")
+
+    newGame = Game(Player_A, Player_B)
