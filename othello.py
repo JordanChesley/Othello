@@ -1,10 +1,15 @@
+import numpy as np
+import pandas as pd
 
 
 class Game_Player:
 
-    color = None
-    name = ""
-    score = 0
+    def __init__(self, name, color):
+        self.heatmap = [[5, 2, 4, 3, 3, 4, 2, 5], [2, 1, 2, 2, 2, 2, 1, 2], [4, 2, 3, 1, 1, 3, 2, 4], [3, 2, 1,	1,	1,	1,	2,	3], [
+            3, 2, 1,	1,	1,	1,	2,	3], [4, 2, 3, 1, 1, 3, 2, 4], [2, 1, 2, 2, 2, 2, 1, 2], [5, 2, 4, 3, 3, 4, 2, 5]]
+        self.name = name
+        self.score = 0
+        self.color = color
 
     def set_color(self, color):
         self.color = color
@@ -12,27 +17,32 @@ class Game_Player:
 
 class Bot (Game_Player):
 
-    def __init__(self, name):
-        self.heatmap = [[5, 2, 4, 3, 3, 4, 2, 5], [2, 1, 2, 2, 2, 2, 1, 2], [4, 2, 3, 1, 1, 3, 2, 4], [3, 2, 1,	1,	1,	1,	2,	3], [
-            3, 2, 1,	1,	1,	1,	2,	3], [4, 2, 3, 1, 1, 3, 2, 4], [2, 1, 2, 2, 2, 2, 1, 2], [5, 2, 4, 3, 3, 4, 2, 5]]
+    def __init__(self, name, color):
+        self.heatmap = np.array([[5, 2, 4, 3, 3, 4, 2, 5], [2, 1, 2, 2, 2, 2, 1, 2], [4, 2, 3, 1, 1, 3, 2, 4], [3, 2, 1, 1,	1,	1,	2,	3], [
+                                3, 2, 1,	1,	1,	1,	2,	3], [4, 2, 3, 1, 1, 3, 2, 4], [2, 1, 2, 2, 2, 2, 1, 2], [5, 2, 4, 3, 3, 4, 2, 5]])
         self.name = f"Bot {name}"
         self.score = 0
+        self.color = color
 
-    def process_boardstate(self, boardstate):
-        pass
+    def transform_boardstate(self, boardstate):
+        if self.color == "Black":
+            boardstate[boardstate == 1] = 2
+            boardstate[boardstate == 0] = 1
+            boardstate[boardstate == 1] = 0
+        return boardstate
 
-    def fitness_function(self, boardstate, heatmap):
-        pass
+    def fitness_function(self, boardstate):
+        points_to_board = boardstate * self.heatmap
 
     def print_heatmap(self):
-        for i in self.heatmap:
-            print(i)
+        print(self.heatmap)
 
 
 class Player(Game_Player):
-    def __init__(self, name):
+    def __init__(self, name, color):
         self.name = f"Player {name}"
         self.score = 0
+        self.color = color
 
 
 class Game:
@@ -42,65 +52,52 @@ class Game:
         self.BOARD_SIZE = 8
 
         # Board is interpreted in terms of White pieces.
-        self.WHITE_BOARD = [[]]
+        self.WHITE_BOARD = np.full((8, 8), np.nan)
 
         # Constant value configurations.
-        self.WHITE = True
-        self.BLACK = False
+        self.WHITE = 1
+        self.BLACK = 0
 
         # Track player scores.
         self.players = [Player_A, Player_B]
 
         # Expressions to apply to board dimensions during scanning tasks.
-        self.EXPRS = ["-1", "+0", "+1"]
+        self.EXPRS = [np.nan, 0, 1]
 
         self.set_starting_config()
         self.play()
 
-    def print_board(self, playable_spaces: list = [], with_labels: bool = False):
-        # Prints the current board state. Set `with_labels` to `True` to print the row and column labels
+    def print_board(self):
         # Board values
         #    None: ' *'
-        #    True: ' W'
-        #   False: ' B'
+        #    1: ' W'
+        #    0: ' B'
         print(
             f'\nBlack - {self.players[0].score}    White - {self.players[1].score}')
-        if with_labels:
-            print(' ', *range(1, self.BOARD_SIZE + 1))
-        for i in range(self.BOARD_SIZE):
-            if with_labels:
-                print(i+1, end='')
-            for j in range(self.BOARD_SIZE):
-                if (i, j) in playable_spaces:
-                    printchar = ' o'
-                else:
-                    printchar = ' *' if self.WHITE_BOARD[i][j] == None else ' W' if self.WHITE_BOARD[i][j] else ' B'
-                print(printchar, end='')
-            print('')
-        print('')
+        temp_board = self.WHITE_BOARD
+        temp_board[temp_board == 1] = "W"
+        temp_board[temp_board == 0] = "B"
+        temp_board[temp_board == np.nan] = "*"
+        print(temp_board)
 
     def set_starting_config(self):
-        # Clear/Set the board and place the initial pieces.
-        # Clear the board / Set board dimensions.
-        self.WHITE_BOARD = [[None for _ in range(self.BOARD_SIZE)]
-                            for _ in range(self.BOARD_SIZE)]
 
         # Set scores to two, as two pieces of each color will start on the board.
         self.SCORE = {self.BLACK: 2, self.WHITE: 2}
 
         # Place initial pieces onto the board.
         center = int(self.BOARD_SIZE / 2)
-        self.WHITE_BOARD[center-1][center-1] = True
-        self.WHITE_BOARD[center-1][center] = False
-        self.WHITE_BOARD[center][center-1] = False
-        self.WHITE_BOARD[center][center] = True
+        self.WHITE_BOARD[center-1, center-1] = 1
+        self.WHITE_BOARD[center-1, center] = 0
+        self.WHITE_BOARD[center, center-1] = 0
+        self.WHITE_BOARD[center, center] = 1
 
     def get_piece(self, row: int, col: int):
         # Returns piece value at a given row and column, or None if no piece exists
 
         if ((row < 0 or row >= self.BOARD_SIZE) or (col < 0 or col >= self.BOARD_SIZE)):
             return None
-        return self.WHITE_BOARD[row][col]
+        return self.WHITE_BOARD[row, col]
 
     def check_playable(self, color: bool, row: int, col: int, row_expr: str, col_expr: str, i: int = 0):
         # Recursive function that checks if a piece can be played at a certain space on the board.
@@ -139,7 +136,7 @@ class Game:
         for row in range(self.BOARD_SIZE):
             for col in range(self.BOARD_SIZE):
                 # Pieces can only be placed on empty spaces.
-                if self.get_piece(row, col) == None:
+                if np.isnan(self.get_piece(row, col)):
                     # In each direction from our point, check if the piece can be placed.
                     for row_expr in self.EXPRS:
                         for col_expr in self.EXPRS:
@@ -182,7 +179,6 @@ class Game:
                 return False
 
     # We get here if the piece is the opposite color of the current playing color.
-
     def play(self):
 
         # Othello Game Loop
@@ -261,16 +257,16 @@ class Game:
 
 # On Game Start User Picks A and B, They Then Game. If No Player is selected, the bots will play against each other.
 if __name__ == "__main__":
-    Player_A = input("Player A: (1) Bot, (2) Person")
+    Player_A = 1  # input("Player A: (1) Bot, (2) Person")
     if int(Player_A) == 1:
-        Player_A = Bot("A")
+        Player_A = Bot("A", "White")
     else:
-        Player_A = Player("A")
+        Player_A = Player("A", "White")
 
-    Player_B = input("Player A: (1) Bot, (2) Person")
+    Player_B = 1  # input("Player A: (1) Bot, (2) Person")
     if int(Player_B) == 1:
-        Player_B = Bot("B")
+        Player_B = Bot("B", "Black")
     else:
-        Player_B = Player("B")
+        Player_B = Player("B", "Black")
 
     newGame = Game(Player_A, Player_B)
