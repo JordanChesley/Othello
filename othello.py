@@ -55,28 +55,27 @@ class Game:
         self.WHITE_BOARD = np.full((8, 8), np.nan)
 
         # Constant value configurations.
-        self.WHITE = 1
-        self.BLACK = 0
+        self.WHITE = 0
+        self.BLACK = 1
 
-        # Track player scores.
+        # Track player for turn order
         self.players = [Player_A, Player_B]
 
+        # Scores Per Game Instance
+        self.score = {2, 2}
+
         # Expressions to apply to board dimensions during scanning tasks.
-        self.EXPRS = [np.nan, 0, 1]
+        self.EXPRS = ["-1", "+0", "+1"]
 
         self.set_starting_config()
         self.play()
 
     def print_board(self):
-        # Board values
-        #    None: ' *'
-        #    1: ' W'
-        #    0: ' B'
         print(
-            f'\nBlack - {self.players[0].score}    White - {self.players[1].score}')
+            f'\nBlack {self.score[self.BLACK]}    White {self.score[self.WHITE]}')
         temp_board = self.WHITE_BOARD
-        temp_board[temp_board == 1] = "W"
-        temp_board[temp_board == 0] = "B"
+        temp_board[temp_board == 0] = "W"
+        temp_board[temp_board == 1] = "B"
         temp_board[temp_board == np.nan] = "*"
         print(temp_board)
 
@@ -87,10 +86,10 @@ class Game:
 
         # Place initial pieces onto the board.
         center = int(self.BOARD_SIZE / 2)
-        self.WHITE_BOARD[center-1, center-1] = 1
-        self.WHITE_BOARD[center-1, center] = 0
-        self.WHITE_BOARD[center, center-1] = 0
-        self.WHITE_BOARD[center, center] = 1
+        self.WHITE_BOARD[center-1, center-1] = 0
+        self.WHITE_BOARD[center-1, center] = 1
+        self.WHITE_BOARD[center, center-1] = 1
+        self.WHITE_BOARD[center, center] = 0
 
     def get_piece(self, row: int, col: int):
         # Returns piece value at a given row and column, or None if no piece exists
@@ -153,6 +152,7 @@ class Game:
         adj_row = eval(f"{row}{row_expr}")
         adj_col = eval(f"{col}{col_expr}")
         piece = self.get_piece(adj_row, adj_col)
+        x = np.where(np.diff(self.WHITE_BOARD) != 0) [1,0,0,nan,0,0,0,1]
 
         # If the piece is non-existent, we cannot flip. Return False.
         if piece == None:
