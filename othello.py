@@ -10,6 +10,18 @@ class Game_Player:
     def set_color(self, color):
         self.color = color
 
+    def play(self, board):
+        playerInput = input(
+            f"{self.color} Input row and column to place piece (e.g. \"0 0\"): ")
+        splinput = playerInput.split()
+        if (not splinput[0].isdigit()) or (not splinput[1].isdigit()):
+            print('Invalid input.')
+            return (-1, -1)
+        else:
+            row = int(splinput[0]) - 1
+            column = int(splinput[1]) - 1
+            return (row, column)
+
 
 class Bot (Game_Player):
 
@@ -20,18 +32,14 @@ class Bot (Game_Player):
         self.score = 0
         self.color = color
 
-    def transform_boardstate(self, boardstate):
-        if self.color == "Black":
-            boardstate[boardstate == 1] = 2
-            boardstate[boardstate == 0] = 1
-            boardstate[boardstate == -1] = 0
-        return boardstate
-
     def fitness_function(self, boardstate):
         points_to_board = boardstate * self.heatmap
 
     def print_heatmap(self):
         print(self.heatmap)
+
+    def play(self, board):
+        pass
 
 
 class Player(Game_Player):
@@ -52,6 +60,9 @@ class Game:
         # Constant value configurations.
         self.WHITE = True
         self.BLACK = False
+
+        # Player A is White, Player B is Black
+        self.players = [Player_A, Player_B]
 
         # Track player scores.
         self.SCORE = {}
@@ -204,6 +215,7 @@ class Game:
 
             # Next color turn.
             team = turn_order[move % 2]
+            player = self.players[team]
 
             # Scan for possible plays this color can make.
             playable_spaces = self.get_playable_spaces(team)
@@ -223,28 +235,7 @@ class Game:
             row = -1
             column = -1
             while (row, column) not in playable_spaces:
-                # Black == Player. Ask player where they want to move.
-                if team == self.BLACK:
-                    player_input = input(
-                        "BLACK: Input row and column to place piece (e.g. \"0 0\"): ")
-                    splinput = player_input.split()
-                    if (not splinput[0].isdigit()) or (not splinput[1].isdigit()):
-                        print('Invalid input.')
-                        continue
-                    row = int(splinput[0]) - 1
-                    column = int(splinput[1]) - 1
-
-                # White == AI. Ask AI for where it wants to move.
-                else:
-                    ai_input = input(
-                        "WHITE: Input row and column to place piece (e.g. \"0 0\"): ")
-                    splinput = ai_input.split()
-                    if (not splinput[0].isdigit()) or (not splinput[1].isdigit()):
-                        print('Invalid input.')
-                        continue
-                    row = int(splinput[0]) - 1
-                    column = int(splinput[1]) - 1
-
+                row, column = player.play()
                 # Do not allow player to place in an invalid space.
                 if (row, column) not in playable_spaces:
                     print('Cannot place there.')
