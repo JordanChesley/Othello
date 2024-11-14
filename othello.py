@@ -65,7 +65,6 @@ class Bot (Game_Player):
     def play(self, boardstate, valid_moves):
         boardstate = self.convert_map(boardstate)
         my_point, your_point = self.fitness_function(boardstate)
-        print(my_point, your_point)
         return valid_moves[0]
 
     def min(self, boardstate, valid_moves, depth, depth_limit):
@@ -244,6 +243,9 @@ class Game:
             team = turn_order[move % 2]
             player = self.players[team]
 
+            # Print Current Player
+            print(f'{player.color}\'s Turn')
+
             # If two consecutive turns have been skipped, the game is over; there are no more valid moves.
             if skipped_turns == 2:
                 print('No more valid moves. Game over!')
@@ -292,13 +294,13 @@ class Game:
 
 # On Game Start User Picks A and B, They Then Game. If No Player is selected, the bots will play against each other.
 if __name__ == "__main__":
-    Player_A = input("Player A: (1) Bot, (2) Person")
+    Player_A = 1  # input("Player A: (1) Bot, (2) Person")
     if int(Player_A) == 1:
         Player_A = Bot("A", "White")
     else:
         Player_A = Player("A", "White")
 
-    Player_B = input("Player B: (1) Bot, (2) Person")
+    Player_B = 1  # input("Player B: (1) Bot, (2) Person")
     if int(Player_B) == 1:
         Player_B = Bot("B", "Black")
     else:
