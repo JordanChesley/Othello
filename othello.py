@@ -1,3 +1,4 @@
+import numpy as np
 
 
 class Game_Player:
@@ -10,7 +11,7 @@ class Game_Player:
     def set_color(self, color):
         self.color = color
 
-    def play(self, board):
+    def play(self, boardstate, valid_moves):
         playerInput = input(
             f"{self.color} Input row and column to place piece (e.g. \"0 0\"): ")
         splinput = playerInput.split()
@@ -26,19 +27,51 @@ class Game_Player:
 class Bot (Game_Player):
 
     def __init__(self, name, color):
-        self.heatmap = [[5, 2, 4, 3, 3, 4, 2, 5], [2, 1, 2, 2, 2, 2, 1, 2], [4, 2, 3, 1, 1, 3, 2, 4], [3, 2, 1, 1,	1,	1,	2,	3], [
-            3, 2, 1,	1,	1,	1,	2,	3], [4, 2, 3, 1, 1, 3, 2, 4], [2, 1, 2, 2, 2, 2, 1, 2], [5, 2, 4, 3, 3, 4, 2, 5]]
+        self.heatmap = [[5, 2, 4, 3, 3, 4, 2, 5],
+                        [2, 1, 2, 2, 2, 2, 1, 2],
+                        [4, 2, 3, 1, 1, 3, 2, 4],
+                        [3, 2, 1, 1, 1,	1, 2, 3],
+                        [3, 2, 1, 1, 1,	1, 2, 3],
+                        [4, 2, 3, 1, 1, 3, 2, 4],
+                        [2, 1, 2, 2, 2, 2, 1, 2],
+                        [5, 2, 4, 3, 3, 4, 2, 5]]
         self.name = f"Bot {name}"
         self.score = 0
         self.color = color
 
     def fitness_function(self, boardstate):
         points_to_board = boardstate * self.heatmap
+        our_point = np.sum(np.where(boardstate == 1))
+        their_point = np.sum(np.where(boardstate == -1))
+        our_weight = np.sum(np.where(points_to_board > 0))
+        their_weight = np.sum(np.where(points_to_board < 0))
+        # This Needs To Be Fixed
+        total_weight = np.sum(np.where(points_to_board > -100))  # This
+        our_score = our_point * (our_weight / total_weight)
+        their_score = their_point * (their_weight / total_weight)
+        return (our_score, their_score)
 
-    def print_heatmap(self):
-        print(self.heatmap)
+    def convert_map(self, boardstate):
+        array = np.array(boardstate)
+        if self.color == "White":
+            array[np.where(array == True)] = 1
+            array[np.where(array == False)] = -1
+        if self.color == "Black":
+            array[np.where(array == False)] = 1
+            array[np.where(array == True)] = -1
+        array[np.where(array == None)] = np.nan
+        return array
 
-    def play(self, board):
+    def play(self, boardstate, valid_moves):
+        boardstate = self.convert_map(boardstate)
+        my_point, your_point = self.fitness_function(boardstate)
+        print(my_point, your_point)
+        return valid_moves[0]
+
+    def min(self, boardstate, valid_moves, depth, depth_limit):
+        pass
+
+    def max(self, boardstate, valid_moves, depth, depth_limit):
         pass
 
 
@@ -206,6 +239,11 @@ class Game:
         skipped_turns = 0
 
         while True:
+
+            # Next color turn.
+            team = turn_order[move % 2]
+            player = self.players[team]
+
             # If two consecutive turns have been skipped, the game is over; there are no more valid moves.
             if skipped_turns == 2:
                 print('No more valid moves. Game over!')
@@ -213,17 +251,12 @@ class Game:
                     f'Black - {self.SCORE[self.BLACK]}    White - {self.SCORE[self.WHITE]}')
                 return
 
-            # Next color turn.
-            team = turn_order[move % 2]
-            player = self.players[team]
-
             # Scan for possible plays this color can make.
             playable_spaces = self.get_playable_spaces(team)
 
             # If no spaces are available to play, skip their turn.
             if len(playable_spaces) == 0:
-                print(
-                    f"{"WHITE" if team else "BLACK"}: Cannot place piece.")
+                print(f"{team}: Cannot place piece.")
                 skipped_turns += 1
                 move += 1
                 continue
@@ -235,7 +268,7 @@ class Game:
             row = -1
             column = -1
             while (row, column) not in playable_spaces:
-                row, column = player.play()
+                row, column = player.play(self.WHITE_BOARD, playable_spaces)
                 # Do not allow player to place in an invalid space.
                 if (row, column) not in playable_spaces:
                     print('Cannot place there.')
@@ -259,16 +292,16 @@ class Game:
 
 # On Game Start User Picks A and B, They Then Game. If No Player is selected, the bots will play against each other.
 if __name__ == "__main__":
-    Player_A = 1  # input("Player A: (1) Bot, (2) Person")
+    Player_A = input("Player A: (1) Bot, (2) Person")
     if int(Player_A) == 1:
         Player_A = Bot("A", "White")
     else:
         Player_A = Player("A", "White")
 
-    Player_B = 1  # input("Player A: (1) Bot, (2) Person")
+    Player_B = input("Player B: (1) Bot, (2) Person")
     if int(Player_B) == 1:
         Player_B = Bot("B", "Black")
     else:
         Player_B = Player("B", "Black")
 
-    newGame = Game(Player_A, Player_B)
+    newGame = Game(Player_B, Player_A)
