@@ -68,9 +68,19 @@ class Bot (Game_Player):
         return valid_moves[0]
 
     def min(self, boardstate, valid_moves, depth, depth_limit):
+        # Scan Board For Valid Moves
+        # Loop Through Valid Moves
+        # Return Move With Lowest Score If depth is hit, else call min
         pass
 
     def max(self, boardstate, valid_moves, depth, depth_limit):
+        # Scan Board For Valid Moves
+        # Loop Through Valid Moves
+        # Increment Depth By 1
+        # Return Move With Highest Score If depth is hit, else call Min
+        pass
+
+    def scan_valid_places(self, array):
         pass
 
 
