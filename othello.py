@@ -1,4 +1,6 @@
 import numpy as np
+from copy import deepcopy
+from sys import exit
 
 
 class Game_Player:
@@ -38,6 +40,7 @@ class Bot (Game_Player):
         self.name = f"Bot {name}"
         self.score = 0
         self.color = color
+        self.color_id = True if color=="White" else False
 
     def fitness_function(self, boardstate):
         points_to_board = boardstate * self.heatmap
@@ -62,23 +65,68 @@ class Bot (Game_Player):
         array[np.where(array == None)] = np.nan
         return array
 
-    def play(self, boardstate, valid_moves):
-        boardstate = self.convert_map(boardstate)
-        my_point, your_point = self.fitness_function(boardstate)
-        return valid_moves[0]
+    def play(self, boardstate, valid_moves, current_score):
+        # boardstate = self.convert_map(boardstate)
+        # my_point, your_point = self.fitness_function(boardstate)
+        # return valid_moves[0]
 
-    def min(self, boardstate, valid_moves, depth, depth_limit):
-        # Scan Board For Valid Moves
-        # Loop Through Valid Moves
-        # Return Move With Lowest Score If depth is hit, else call min
-        pass
+        # Use a modified max() function to determine the best move.
+        bestscore = -np.inf
+        bestmove = (-1, -1)
+        for row, column in valid_moves:
+            # Create new game state and place piece.
+            state = Game(None, None, deepcopy(boardstate), deepcopy(current_score))
+            state.place_piece(self.color_id, row, column)
 
-    def max(self, boardstate, valid_moves, depth, depth_limit):
-        # Scan Board For Valid Moves
-        # Loop Through Valid Moves
-        # Increment Depth By 1
-        # Return Move With Highest Score If depth is hit, else call Min
-        pass
+            # Get the min score of opponent's possible moves.
+            score = self.min(state.WHITE_BOARD, state.get_playable_spaces(not self.color_id), current_score, 0, 2)
+
+            # Get max between our current max and this score.
+            bestscore = max(bestscore, score)
+            if bestscore == score: bestmove = (row, column)
+
+        # Return coordinates of best move.
+        return bestmove
+
+    def min(self, boardstate, valid_moves, boardscore, depth, depth_limit):
+        # If no more valid moves, return the opponent's score.
+        if len(valid_moves) == 0: return self.fitness_function(self.convert_map(boardstate))[1]
+
+        bestmin = np.inf
+        # Loop through all possible moves.
+        for row, column in valid_moves:
+            # Create new game state and place piece.
+            state = Game(None, None, deepcopy(boardstate), deepcopy(boardscore))
+            state.place_piece(not self.color_id, row, column)
+
+            # If we are at the maximum depth, use opponent's score.
+            if depth == depth_limit: 
+                score = self.fitness_function(self.convert_map(state.WHITE_BOARD))[1]
+            # Else, use the max score of our possible moves.
+            else:
+                score = self.max(state.WHITE_BOARD, state.get_playable_spaces(self.color_id), state.SCORE, depth+1, depth_limit)
+
+            # Get min between our current min and this score.
+            bestmin = min(bestmin, score)
+        return bestmin
+
+    def max(self, boardstate, valid_moves, boardscore, depth, depth_limit):
+        # If no more valid moves, return our score.
+        if len(valid_moves) == 0: return self.fitness_function(self.convert_map(boardstate))[0]
+
+        bestmax = -np.inf
+        # Loop through all possible moves.
+        for row, column in valid_moves:
+            # Create new game state and place piece.
+            state = Game(None, None, deepcopy(boardstate), deepcopy(boardscore))
+            state.place_piece(self.color_id, row, column)
+
+            # Get the min score of opponent's possible moves.
+            score = self.min(state.WHITE_BOARD, state.get_playable_spaces(not self.color_id), state.SCORE, depth, depth_limit)
+
+            # Get max between our current max and this score.
+            bestmax = max(bestmax, score)
+        return bestmax
 
     def scan_valid_places(self, array):
         pass
@@ -92,7 +140,7 @@ class Player(Game_Player):
 
 
 class Game:
-    def __init__(self, PlayerA: Game_Player, PlayerB: Game_Player, board: list = [[]]):
+    def __init__(self, PlayerA: Game_Player, PlayerB: Game_Player, board: list = [[]], score: dict = {}):
         # Board configurations.
         self.BOARD_SIZE = 8
 
@@ -104,16 +152,13 @@ class Game:
         self.BLACK = False
 
         # Player A is White, Player B is Black
-        self.players = [Player_A, Player_B]
+        self.players = [PlayerA, PlayerB]
 
         # Track player scores.
-        self.SCORE = {}
+        self.SCORE = score
 
         # Expresions to apply to board dimensions during scanning tasks.
         self.EXPRS = ["-1", "+0", "+1"]
-
-        self.set_starting_config()
-        self.play()
 
     def print_board(self, playable_spaces: list = [], with_labels: bool = False):
         '''Prints the current board state. Set `with_labels` to `True` to print the row and column labels. '''
@@ -122,7 +167,7 @@ class Game:
         #    None: ' *'
         #    True: ' W'
         #   False: ' B'
-        print(f'Black-{self.SCORE[self.BLACK]} WHITE-{self.SCORE[self.WHITE]}')
+        print(f'Black-{self.SCORE[self.BLACK]} White-{self.SCORE[self.WHITE]}')
         if with_labels:
             print(' ', *range(1, self.BOARD_SIZE + 1))
         for i in range(self.BOARD_SIZE):
@@ -203,7 +248,8 @@ class Game:
                     for row_expr in self.EXPRS:
                         for col_expr in self.EXPRS:
                             if (self.check_playable(color, row, col, row_expr, col_expr)):
-                                playable_spaces.append((row, col))
+                                if (row, col) not in playable_spaces:
+                                    playable_spaces.append((row, col))
                                 # We only need to find at least one playable path. Break to reduce calculations.
                                 break
         return playable_spaces
@@ -239,6 +285,17 @@ class Game:
                 return True
             else:
                 return False
+    
+    def place_piece(self, team, row, column):
+        # Place piece and increase score by one.
+        self.WHITE_BOARD[row][column] = team
+        self.SCORE[team] += 1
+
+        # Flip board pieces as necessary.
+        for row_rule in self.EXPRS:
+            for col_rule in self.EXPRS:
+                self.flip_pieces(
+                    team, row, column, row_rule, col_rule)
 
     def play(self):
         '''Othello game loop.'''
@@ -280,20 +337,14 @@ class Game:
             row = -1
             column = -1
             while (row, column) not in playable_spaces:
-                row, column = player.play(self.WHITE_BOARD, playable_spaces)
+                row, column = player.play(self.WHITE_BOARD, playable_spaces, self.SCORE)
                 # Do not allow player to place in an invalid space.
                 if (row, column) not in playable_spaces:
                     print('Cannot place there.')
 
-            # Place piece and increase score by one.
-            self.WHITE_BOARD[row][column] = team
-            self.SCORE[team] += 1
-
-            # Flip board pieces as necessary.
-            for row_rule in self.EXPRS:
-                for col_rule in self.EXPRS:
-                    self.flip_pieces(
-                        team, row, column, row_rule, col_rule)
+            # Place piece perform piece flipping.
+            self.place_piece(team , row, column)
+            print(f"{player.color} plays at {(row + 1, column + 1)}.\n")
 
             # A successful turn has occurred. Reset skip counter.
             skipped_turns = 0
@@ -317,3 +368,9 @@ if __name__ == "__main__":
         Player_B = Player("B", "Black")
 
     newGame = Game(Player_B, Player_A)
+    newGame.set_starting_config()
+    try:
+        newGame.play()
+    except KeyboardInterrupt:
+        print("Quitting game...")
+        exit(0)
