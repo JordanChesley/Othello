@@ -230,8 +230,8 @@ class Game:
                 if len(index) == 0:
                     continue
                 if np.all(dirs[:index[0]] == -1):
-                    print(dirs.flags.w)
-                    dirs[:index[0]] = 1
+                    # dirs[:index[0]] = 1
+                    pass
 
     def print_board(self, playable_spaces: list = [], with_labels: bool = False):
         '''Prints the current board state. Set `with_labels` to `True` to print the row and column labels. '''
