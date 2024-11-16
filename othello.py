@@ -75,7 +75,7 @@ class Bot (Game_Player):
             array[np.where(array == 1)] = False
             array[np.where(array == -1)] = True
         array[np.where(array == np.nan)] = None
-        return array
+        return array.tolist()
 
     def scan_valid_places(self, x, y, boardstate):
         # Make Sure Piece Is in The Board
