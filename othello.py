@@ -76,18 +76,25 @@ class Bot (Game_Player):
             return False
 
         offset = y - x  # Calculate The Offset From The Main Diagonal
+        # Get all spaces to the left of the x,y and invert the list
         left = boardstate[x, :y][::-1]
+        # Get all the spaces to the right of the x,y
         right = boardstate[x, y+1:]
+        # Get all the spaces above the origin and invert the list
         up = boardstate[:x, y][::-1]
-        down = boardstate[x+1:, y]
+        down = boardstate[x+1:, y]  # Get all the spaces below the x, y
+        # Get the spaces to the ltr diag above x, y and invert the list
         left_diagonal_high = np.diagonal(boardstate, offset=offset)[:x][::-1]
+        # Get the spaces to the ltr diag below x, y
         left_diagonal_low = np.diagonal(boardstate, offset=offset)[x+1:]
         right_diagonal_high = np.diagonal(
             np.fliplr(boardstate), offset=offset)[:x][::-1]
         right_diagonal_low = np.diagonal(
             np.fliplr(boardstate), offset=offset)[x+1:]
+        # All Possible Paths From Origin In Every Direction
         possible_paths = [
             left, right, up, down, left_diagonal_low, left_diagonal_high, right_diagonal_high, right_diagonal_low]
+        # Scan each array from x,y. Check to make sure there is only -1 between x,y and the first 1.
         for dir in possible_paths:
             if len(dir) >= 2:
                 index = np.where(dir == 1)[0]
