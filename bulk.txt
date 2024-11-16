@@ -1,0 +1,21 @@
+ def scan_valid_places(self, x, y, boardstate):
+        # Make Sure Piece Is in The Board
+        if ((x >= len(boardstate[0]) or x < 0)) or ((y >= len(boardstate[:, 0]) or y < 0)):
+            return False
+
+        # Make Sure Its A np.nan To Be Able To Place There
+        if not (np.isnan(boardstate[x, y])):
+            return False
+
+        offset = x - y
+        row = boardstate[x]
+        column = boardstate[:, y]
+        if x > 0:
+            left = row[:x][::-1]
+        if x+1 < len(boardstate):
+            right = row[x+1:]
+        if y > 0:
+            up = column[:y][::-1]
+        if y+1 < len(boardstate):
+            down = column[y+1:]
+        ltr_angle = np.diagonal(boardstate, offset=offset)

@@ -40,7 +40,7 @@ class Bot (Game_Player):
         self.name = f"Bot {name}"
         self.score = 0
         self.color = color
-        self.color_id = True if color=="White" else False
+        self.color_id = True if color == "White" else False
 
     def fitness_function(self, boardstate):
         points_to_board = boardstate * self.heatmap
@@ -60,76 +60,88 @@ class Bot (Game_Player):
             array[np.where(array == True)] = 1
             array[np.where(array == False)] = -1
         if self.color == "Black":
-            array[np.where(array == False)] = 1
             array[np.where(array == True)] = -1
+            array[np.where(array == False)] = 1
+
         array[np.where(array == None)] = np.nan
         return array
 
     def play(self, boardstate, valid_moves, current_score):
-        # boardstate = self.convert_map(boardstate)
-        # my_point, your_point = self.fitness_function(boardstate)
-        # return valid_moves[0]
+        ''' x, y = valid_moves[0]
+         boardstate = self.convert_map(boardstate)
+         moves = self.scan_valid_places(x, y, boardstate)'''
 
         # Use a modified max() function to determine the best move.
         bestscore = -np.inf
         bestmove = (-1, -1)
         for row, column in valid_moves:
             # Create new game state and place piece.
-            state = Game(None, None, deepcopy(boardstate), deepcopy(current_score))
+            state = Game(None, None, deepcopy(
+                boardstate), deepcopy(current_score))
             state.place_piece(self.color_id, row, column)
 
             # Get the min score of opponent's possible moves.
-            score = self.min(state.WHITE_BOARD, state.get_playable_spaces(not self.color_id), current_score, 0, 2)
+            score = self.min(state.WHITE_BOARD, state.get_playable_spaces(
+                not self.color_id), current_score, 0, 2, 0, 0)
 
             # Get max between our current max and this score.
             bestscore = max(bestscore, score)
-            if bestscore == score: bestmove = (row, column)
+            if bestscore == score:
+                bestmove = (row, column)
 
         # Return coordinates of best move.
         return bestmove
 
-    def min(self, boardstate, valid_moves, boardscore, depth, depth_limit):
+    def min(self, boardstate, valid_moves, boardscore, depth, depth_limit, alpha, beta):
         # If no more valid moves, return the opponent's score.
-        if len(valid_moves) == 0: return self.fitness_function(self.convert_map(boardstate))[1]
+        if len(valid_moves) == 0:
+            return self.fitness_function(self.convert_map(boardstate))[1]
 
         bestmin = np.inf
         # Loop through all possible moves.
         for row, column in valid_moves:
             # Create new game state and place piece.
-            state = Game(None, None, deepcopy(boardstate), deepcopy(boardscore))
+            state = Game(None, None, deepcopy(
+                boardstate), deepcopy(boardscore))
             state.place_piece(not self.color_id, row, column)
 
             # If we are at the maximum depth, use opponent's score.
-            if depth == depth_limit: 
-                score = self.fitness_function(self.convert_map(state.WHITE_BOARD))[1]
+            if depth == depth_limit:
+                score = self.fitness_function(
+                    self.convert_map(state.WHITE_BOARD))[1]
             # Else, use the max score of our possible moves.
             else:
-                score = self.max(state.WHITE_BOARD, state.get_playable_spaces(self.color_id), state.SCORE, depth+1, depth_limit)
+                score = self.max(state.WHITE_BOARD, state.get_playable_spaces(
+                    self.color_id), state.SCORE, depth+1, depth_limit, alpha, bestmin)
 
             # Get min between our current min and this score.
             bestmin = min(bestmin, score)
+            if beta <= alpha:
+                break
         return bestmin
 
-    def max(self, boardstate, valid_moves, boardscore, depth, depth_limit):
+    def max(self, boardstate, valid_moves, boardscore, depth, depth_limit, alpha, beta):
         # If no more valid moves, return our score.
-        if len(valid_moves) == 0: return self.fitness_function(self.convert_map(boardstate))[0]
+        if len(valid_moves) == 0:
+            return self.fitness_function(self.convert_map(boardstate))[0]
 
         bestmax = -np.inf
         # Loop through all possible moves.
         for row, column in valid_moves:
             # Create new game state and place piece.
-            state = Game(None, None, deepcopy(boardstate), deepcopy(boardscore))
+            state = Game(None, None, deepcopy(
+                boardstate), deepcopy(boardscore))
             state.place_piece(self.color_id, row, column)
 
             # Get the min score of opponent's possible moves.
-            score = self.min(state.WHITE_BOARD, state.get_playable_spaces(not self.color_id), state.SCORE, depth, depth_limit)
+            score = self.min(state.WHITE_BOARD, state.get_playable_spaces(
+                not self.color_id), state.SCORE, depth, depth_limit, bestmax, beta)
 
             # Get max between our current max and this score.
             bestmax = max(bestmax, score)
+            if beta <= alpha:
+                break
         return bestmax
-
-    def scan_valid_places(self, array):
-        pass
 
 
 class Player(Game_Player):
@@ -285,7 +297,7 @@ class Game:
                 return True
             else:
                 return False
-    
+
     def place_piece(self, team, row, column):
         # Place piece and increase score by one.
         self.WHITE_BOARD[row][column] = team
@@ -337,13 +349,14 @@ class Game:
             row = -1
             column = -1
             while (row, column) not in playable_spaces:
-                row, column = player.play(self.WHITE_BOARD, playable_spaces, self.SCORE)
+                row, column = player.play(
+                    self.WHITE_BOARD, playable_spaces, self.SCORE)
                 # Do not allow player to place in an invalid space.
                 if (row, column) not in playable_spaces:
                     print('Cannot place there.')
 
             # Place piece perform piece flipping.
-            self.place_piece(team , row, column)
+            self.place_piece(team, row, column)
             print(f"{player.color} plays at {(row + 1, column + 1)}.\n")
 
             # A successful turn has occurred. Reset skip counter.
