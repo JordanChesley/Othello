@@ -66,10 +66,40 @@ class Bot (Game_Player):
         array[np.where(array == None)] = np.nan
         return array
 
+    def scan_valid_places(self, x, y, boardstate):
+        # Make Sure Piece Is in The Board
+        if ((x >= len(boardstate[0]) or x < 0)) or ((y >= len(boardstate[:, 0]) or y < 0)):
+            return False
+
+        # Make Sure Its A np.nan To Be Able To Place There
+        if not (np.isnan(boardstate[x, y])):
+            return False
+
+        offset = y - x  # Calculate The Offset From The Main Diagonal
+        left = boardstate[x, :y][::-1]
+        right = boardstate[x, y+1:]
+        up = boardstate[:x, y][::-1]
+        down = boardstate[x+1:, y]
+        left_diagonal_high = np.diagonal(boardstate, offset=offset)[:x][::-1]
+        left_diagonal_low = np.diagonal(boardstate, offset=offset)[x+1:]
+        right_diagonal_high = np.diagonal(
+            np.fliplr(boardstate), offset=offset)[:x][::-1]
+        right_diagonal_low = np.diagonal(
+            np.fliplr(boardstate), offset=offset)[x+1:]
+        possible_paths = [
+            left, right, up, down, left_diagonal_low, left_diagonal_high, right_diagonal_high, right_diagonal_low]
+        for dir in possible_paths:
+            if len(dir) >= 2:
+                index = np.where(dir == 1)[0]
+                if len(index) == 0:
+                    continue
+                if np.all(dir[:index[0]] == -1):
+                    return True
+        return False
+
     def play(self, boardstate, valid_moves, current_score):
-        ''' x, y = valid_moves[0]
-         boardstate = self.convert_map(boardstate)
-         moves = self.scan_valid_places(x, y, boardstate)'''
+        x, y = valid_moves[0]
+        moves = self.scan_valid_places(x, y, boardstate)
 
         # Use a modified max() function to determine the best move.
         bestscore = -np.inf
