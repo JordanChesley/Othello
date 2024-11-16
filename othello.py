@@ -13,7 +13,7 @@ class Game_Player:
     def set_color(self, color):
         self.color = color
 
-    def play(self, boardstate, valid_moves):
+    def play(self, boardstate, valid_moves, current_score):
         playerInput = input(
             f"{self.color} Input row and column to place piece (e.g. \"0 0\"): ")
         splinput = playerInput.split()
