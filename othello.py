@@ -54,7 +54,7 @@ class Bot (Game_Player):
         their_score = their_point * (their_weight / total_weight)
         return (our_score, their_score)
 
-    def convert_map(self, boardstate):
+    def convert_map_bin(self, boardstate):
         array = np.array(boardstate)
         if self.color == "White":
             array[np.where(array == True)] = 1
@@ -64,6 +64,17 @@ class Bot (Game_Player):
             array[np.where(array == False)] = 1
 
         array[np.where(array == None)] = np.nan
+        return array
+
+    def convert_map_img(self, boardstate):
+        array = np.array(boardstate)
+        if self.color == "White":
+            array[np.where(array == 1)] = True
+            array[np.where(array == -1)] = False
+        if self.color == "Black":
+            array[np.where(array == 1)] = False
+            array[np.where(array == -1)] = True
+        array[np.where(array == np.nan)] = None
         return array
 
     def scan_valid_places(self, x, y, boardstate):
@@ -104,9 +115,45 @@ class Bot (Game_Player):
                     return True
         return False
 
+    def flip_pieces(self, x, y, boardstate):
+        # Make Sure Piece Is in The Board
+        if ((x >= len(boardstate[0]) or x < 0)) or ((y >= len(boardstate[:, 0]) or y < 0)):
+            return False
+
+        # Make Sure Its A np.nan To Be Able To Place There
+        if not (np.isnan(boardstate[x, y])):
+            return False
+
+        offset = y - x  # Calculate The Offset From The Main Diagonal
+        # Get all spaces to the left of the x,y and invert the list
+        left = boardstate[x, :y][::-1]
+        # Get all the spaces to the right of the x,y
+        right = boardstate[x, y+1:]
+        # Get all the spaces above the origin and invert the list
+        up = boardstate[:x, y][::-1]
+        down = boardstate[x+1:, y]  # Get all the spaces below the x, y
+        # Get the spaces to the ltr diag above x, y and invert the list
+        left_diagonal_high = np.diagonal(boardstate, offset=offset)[:x][::-1]
+        # Get the spaces to the ltr diag below x, y
+        left_diagonal_low = np.diagonal(boardstate, offset=offset)[x+1:]
+        right_diagonal_high = np.diagonal(
+            np.fliplr(boardstate), offset=offset)[:x][::-1]
+        right_diagonal_low = np.diagonal(
+            np.fliplr(boardstate), offset=offset)[x+1:]
+        # All Possible Paths From Origin In Every Direction
+        possible_paths = [
+            left, right, up, down, left_diagonal_low, left_diagonal_high, right_diagonal_high, right_diagonal_low]
+        # Scan each array from x,y. Check to make sure there is only -1 between x,y and the first 1.
+        for dir in possible_paths:
+            if len(dir) >= 2:
+                index = np.where(dir == 1)[0]
+                if len(index) == 0:
+                    continue
+                if np.all(dir[:index[0]] == -1):
+                    dir[:index] = 1
+        return
+
     def play(self, boardstate, valid_moves, current_score):
-        x, y = valid_moves[0]
-        moves = self.scan_valid_places(x, y, boardstate)
 
         # Use a modified max() function to determine the best move.
         bestscore = -np.inf
@@ -132,7 +179,7 @@ class Bot (Game_Player):
     def min(self, boardstate, valid_moves, boardscore, depth, depth_limit, alpha, beta):
         # If no more valid moves, return the opponent's score.
         if len(valid_moves) == 0:
-            return self.fitness_function(self.convert_map(boardstate))[1]
+            return self.fitness_function(self.convert_map_bin(boardstate))[1]
 
         bestmin = np.inf
         # Loop through all possible moves.
@@ -145,7 +192,7 @@ class Bot (Game_Player):
             # If we are at the maximum depth, use opponent's score.
             if depth == depth_limit:
                 score = self.fitness_function(
-                    self.convert_map(state.WHITE_BOARD))[1]
+                    self.convert_map_bin(state.WHITE_BOARD))[1]
             # Else, use the max score of our possible moves.
             else:
                 score = self.max(state.WHITE_BOARD, state.get_playable_spaces(
@@ -160,7 +207,7 @@ class Bot (Game_Player):
     def max(self, boardstate, valid_moves, boardscore, depth, depth_limit, alpha, beta):
         # If no more valid moves, return our score.
         if len(valid_moves) == 0:
-            return self.fitness_function(self.convert_map(boardstate))[0]
+            return self.fitness_function(self.convert_map_bin(boardstate))[0]
 
         bestmax = -np.inf
         # Loop through all possible moves.
