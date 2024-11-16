@@ -38,7 +38,7 @@ class Bot (Game_Player):
                         [2, 1, 2, 2, 2, 2, 1, 2],
                         [5, 2, 4, 3, 3, 4, 2, 5]]
         self.name = f"Bot {name}"
-        self.score = 0
+        self.score = 2
         self.color = color
         self.color_id = True if color == "White" else False
 
@@ -54,105 +54,6 @@ class Bot (Game_Player):
         their_score = their_point * (their_weight / total_weight)
         return (our_score, their_score)
 
-    def convert_map_bin(self, boardstate):
-        array = np.array(boardstate)
-        if self.color == "White":
-            array[np.where(array == True)] = 1
-            array[np.where(array == False)] = -1
-        if self.color == "Black":
-            array[np.where(array == True)] = -1
-            array[np.where(array == False)] = 1
-
-        array[np.where(array == None)] = np.nan
-        return array
-
-    def convert_map_img(self, boardstate):
-        array = np.array(boardstate)
-        if self.color == "White":
-            array[np.where(array == 1)] = True
-            array[np.where(array == -1)] = False
-        if self.color == "Black":
-            array[np.where(array == 1)] = False
-            array[np.where(array == -1)] = True
-        array[np.where(array == np.nan)] = None
-        return array.tolist()
-
-    def scan_valid_places(self, x, y, boardstate):
-        # Make Sure Piece Is in The Board
-        if ((x >= len(boardstate[0]) or x < 0)) or ((y >= len(boardstate[:, 0]) or y < 0)):
-            return False
-
-        # Make Sure Its A np.nan To Be Able To Place There
-        if not (np.isnan(boardstate[x, y])):
-            return False
-
-        offset = y - x  # Calculate The Offset From The Main Diagonal
-        # Get all spaces to the left of the x,y and invert the list
-        left = boardstate[x, :y][::-1]
-        # Get all the spaces to the right of the x,y
-        right = boardstate[x, y+1:]
-        # Get all the spaces above the origin and invert the list
-        up = boardstate[:x, y][::-1]
-        down = boardstate[x+1:, y]  # Get all the spaces below the x, y
-        # Get the spaces to the ltr diag above x, y and invert the list
-        left_diagonal_high = np.diagonal(boardstate, offset=offset)[:x][::-1]
-        # Get the spaces to the ltr diag below x, y
-        left_diagonal_low = np.diagonal(boardstate, offset=offset)[x+1:]
-        right_diagonal_high = np.diagonal(
-            np.fliplr(boardstate), offset=offset)[:x][::-1]
-        right_diagonal_low = np.diagonal(
-            np.fliplr(boardstate), offset=offset)[x+1:]
-        # All Possible Paths From Origin In Every Direction
-        possible_paths = [
-            left, right, up, down, left_diagonal_low, left_diagonal_high, right_diagonal_high, right_diagonal_low]
-        # Scan each array from x,y. Check to make sure there is only -1 between x,y and the first 1.
-        for dir in possible_paths:
-            if len(dir) >= 2:
-                index = np.where(dir == 1)[0]
-                if len(index) == 0:
-                    continue
-                if np.all(dir[:index[0]] == -1):
-                    return True
-        return False
-
-    def flip_pieces(self, x, y, boardstate):
-        # Make Sure Piece Is in The Board
-        if ((x >= len(boardstate[0]) or x < 0)) or ((y >= len(boardstate[:, 0]) or y < 0)):
-            return False
-
-        # Make Sure Its A np.nan To Be Able To Place There
-        if not (np.isnan(boardstate[x, y])):
-            return False
-
-        offset = y - x  # Calculate The Offset From The Main Diagonal
-        # Get all spaces to the left of the x,y and invert the list
-        left = boardstate[x, :y][::-1]
-        # Get all the spaces to the right of the x,y
-        right = boardstate[x, y+1:]
-        # Get all the spaces above the origin and invert the list
-        up = boardstate[:x, y][::-1]
-        down = boardstate[x+1:, y]  # Get all the spaces below the x, y
-        # Get the spaces to the ltr diag above x, y and invert the list
-        left_diagonal_high = np.diagonal(boardstate, offset=offset)[:x][::-1]
-        # Get the spaces to the ltr diag below x, y
-        left_diagonal_low = np.diagonal(boardstate, offset=offset)[x+1:]
-        right_diagonal_high = np.diagonal(
-            np.fliplr(boardstate), offset=offset)[:x][::-1]
-        right_diagonal_low = np.diagonal(
-            np.fliplr(boardstate), offset=offset)[x+1:]
-        # All Possible Paths From Origin In Every Direction
-        possible_paths = [
-            left, right, up, down, left_diagonal_low, left_diagonal_high, right_diagonal_high, right_diagonal_low]
-        # Scan each array from x,y. Check to make sure there is only -1 between x,y and the first 1.
-        for dir in possible_paths:
-            if len(dir) >= 2:
-                index = np.where(dir == 1)[0]
-                if len(index) == 0:
-                    continue
-                if np.all(dir[:index[0]] == -1):
-                    dir[:index] = 1
-        return
-
     def play(self, boardstate, valid_moves, current_score):
 
         # Use a modified max() function to determine the best move.
@@ -162,7 +63,7 @@ class Bot (Game_Player):
             # Create new game state and place piece.
             state = Game(None, None, deepcopy(
                 boardstate), deepcopy(current_score))
-            state.place_piece(self.color_id, row, column)
+            state.flip_pieces(row, column)
 
             # Get the min score of opponent's possible moves.
             score = self.min(state.WHITE_BOARD, state.get_playable_spaces(
@@ -231,7 +132,7 @@ class Bot (Game_Player):
 class Player(Game_Player):
     def __init__(self, name, color):
         self.name = f"Player {name}"
-        self.score = 0
+        self.score = 2
         self.color = color
 
 
@@ -253,8 +154,84 @@ class Game:
         # Track player scores.
         self.SCORE = score
 
-        # Expresions to apply to board dimensions during scanning tasks.
-        self.EXPRS = ["-1", "+0", "+1"]
+    def scan_valid_place(self, x, y):
+        boardstate = self.WHITE_BOARD
+        # Make Sure Piece Is in The Board
+        if ((x >= len(boardstate[0]) or x < 0)) or ((y >= len(boardstate[:, 0]) or y < 0)):
+            return False
+
+        # Make Sure Its A np.nan To Be Able To Place There
+        if not (np.isnan(boardstate[x, y])):
+            return False
+
+        offset = y - x  # Calculate The Offset From The Main Diagonal
+        # Get all spaces to the left of the x,y and invert the list
+        left = boardstate[x, :y][::-1]
+        # Get all the spaces to the right of the x,y
+        right = boardstate[x, y+1:]
+        # Get all the spaces above the origin and invert the list
+        up = boardstate[:x, y][::-1]
+        down = boardstate[x+1:, y]  # Get all the spaces below the x, y
+        # Get the spaces to the ltr diag above x, y and invert the list
+        left_diagonal_high = np.diagonal(
+            boardstate, offset=offset)[:x][::-1]
+        # Get the spaces to the ltr diag below x, y
+        left_diagonal_low = np.diagonal(boardstate, offset=offset)[x+1:]
+        right_diagonal_high = np.diagonal(
+            np.fliplr(boardstate), offset=offset)[:x][::-1]
+        right_diagonal_low = np.diagonal(
+            np.fliplr(boardstate), offset=offset)[x+1:]
+        # All Possible Paths From Origin In Every Direction
+        possible_paths = [left_diagonal_low, left_diagonal_high,
+                          right_diagonal_high, right_diagonal_low, left, right, up, down]
+        # Scan each array from x,y. Check to make sure there is only -1 between x,y and the first 1.
+        for dirs in possible_paths:
+            if len(dirs) >= 2:
+                index = np.where(dirs == 1)[0]
+                if len(index) == 0:
+                    continue
+                if np.all(dirs[:index[0]] == -1):
+                    return True
+        return False
+
+    def flip_pieces(self, x, y):
+        boardstate = self.WHITE_BOARD
+        # Make Sure Piece Is in The Board
+        if ((x >= len(boardstate[0]) or x < 0)) or ((y >= len(boardstate[:, 0]) or y < 0)):
+            return False
+
+        # Make Sure Its A np.nan To Be Able To Place There
+        if not (np.isnan(boardstate[x, y])):
+            return False
+
+        offset = y - x  # Calculate The Offset From The Main Diagonal
+        # Get all spaces to the left of the x,y and invert the list
+        left = boardstate[x, :y][::-1]
+        # Get all the spaces to the right of the x,y
+        right = boardstate[x, y+1:]
+        # Get all the spaces above the origin and invert the list
+        up = boardstate[:x, y][::-1]
+        down = boardstate[x+1:, y]  # Get all the spaces below the x, y
+        # Get the spaces to the ltr diag above x, y and invert the list
+        left_diagonal_high = np.diagonal(boardstate, offset=offset)[:x][::-1]
+        # Get the spaces to the ltr diag below x, y
+        left_diagonal_low = np.diagonal(boardstate, offset=offset)[x+1:]
+        right_diagonal_high = np.diagonal(
+            np.fliplr(boardstate), offset=offset)[:x][::-1]
+        right_diagonal_low = np.diagonal(
+            np.fliplr(boardstate), offset=offset)[x+1:]
+        # All Possible Paths From Origin In Every Direction
+        possible_paths = [
+            left, right, up, down, left_diagonal_low, left_diagonal_high, right_diagonal_high, right_diagonal_low]
+        # Scan each array from x,y. Check to make sure there is only -1 between x,y and the first 1.
+        for dirs in possible_paths:
+            if len(dirs) >= 2:
+                index = np.where(dirs == 1)[0]
+                if len(index) == 0:
+                    continue
+                if np.all(dirs[:index[0]] == -1):
+                    print(dirs.flags.w)
+                    dirs[:index[0]] = 1
 
     def print_board(self, playable_spaces: list = [], with_labels: bool = False):
         '''Prints the current board state. Set `with_labels` to `True` to print the row and column labels. '''
@@ -265,15 +242,20 @@ class Game:
         #   False: ' B'
         print(f'Black-{self.SCORE[self.BLACK]} White-{self.SCORE[self.WHITE]}')
         if with_labels:
-            print(' ', *range(1, self.BOARD_SIZE + 1))
+            print(' ', *range(0, self.BOARD_SIZE))
         for i in range(self.BOARD_SIZE):
             if with_labels:
-                print(i+1, end='')
+                print(i, end='')
             for j in range(self.BOARD_SIZE):
                 if (i, j) in playable_spaces:
                     printchar = ' o'
                 else:
-                    printchar = ' *' if self.WHITE_BOARD[i][j] == None else ' W' if self.WHITE_BOARD[i][j] else ' B'
+                    if np.isnan(self.WHITE_BOARD[i, j]):
+                        printchar = ' *'
+                if self.WHITE_BOARD[i, j] == 1:
+                    printchar = ' W'
+                if self.WHITE_BOARD[i, j] == -1:
+                    printchar = ' B'
                 print(printchar, end='')
             print('')
         print('')
@@ -283,18 +265,17 @@ class Game:
 
         # Clear the board / Set board dimensions.
         if len(self.WHITE_BOARD) == 1:
-            self.WHITE_BOARD = [
-                [None]*self.BOARD_SIZE for _ in range(self.BOARD_SIZE)]
-
+            self.WHITE_BOARD = np.zeros((self.BOARD_SIZE, self.BOARD_SIZE))
+        self.WHITE_BOARD[np.where(self.WHITE_BOARD == 0)] = np.nan
         # Set scores to two, as two pieces of each color will start on the board.
         self.SCORE = {self.BLACK: 2, self.WHITE: 2}
 
         # Place initial pieces onto the board.
         center = int(self.BOARD_SIZE / 2)
-        self.WHITE_BOARD[center-1][center-1] = True
-        self.WHITE_BOARD[center-1][center] = False
-        self.WHITE_BOARD[center][center-1] = False
-        self.WHITE_BOARD[center][center] = True
+        self.WHITE_BOARD[center-1, center-1] = 1
+        self.WHITE_BOARD[center-1, center] = -1
+        self.WHITE_BOARD[center, center-1] = -1
+        self.WHITE_BOARD[center, center] = 1
 
     def get_piece(self, row: int, col: int):
         '''Returns piece value at a given row and column, or None if no piece exists.'''
@@ -302,96 +283,14 @@ class Game:
             return None
         return self.WHITE_BOARD[row][col]
 
-    def check_playable(self, color: bool, row: int, col: int, row_expr: str, col_expr: str, i: int = 0):
-        '''Recursive function that checks if a piece can be played at a certain space on the board.'''
-
-        # Get adjacent piece in the specified direction.
-        adj_row = eval(f"{row}{row_expr}")
-        adj_col = eval(f"{col}{col_expr}")
-        piece = self.get_piece(adj_row, adj_col)
-
-        # If the piece is non-existent, we cannot place the piece. Return False.
-        if piece == None:
-            return False
-
-        # During our first iteration, the immediate adjacent piece must be of the opposite color.
-        if i == 0:
-            if piece == color:
-                return False
-            elif piece != color:
-                return self.check_playable(color, eval(f"{row}{row_expr}"), eval(f"{col}{col_expr}"), row_expr, col_expr, i+1)
-
-        # For all other iterations:
-
-        # If the piece is the same color, we have a valid placement.
-        elif piece == color:
-            return True
-
-        # If piece is the other color, continue checking.
-        elif piece != color:
-            return self.check_playable(color, adj_row, adj_col, row_expr, col_expr, i+1)
-
-    def get_playable_spaces(self, color):
-        '''Returns all possible moves for the given color.'''
-
+    # Get Valid Playable Spaces
+    def get_playable_spaces(self):
         playable_spaces = []
-        # Iterate through our entire board.
-        for row in range(self.BOARD_SIZE):
-            for col in range(self.BOARD_SIZE):
-                # Pieces can only be placed on empty spaces.
-                if self.get_piece(row, col) == None:
-                    # In each direction from our point, check if the piece can be placed.
-                    for row_expr in self.EXPRS:
-                        for col_expr in self.EXPRS:
-                            if (self.check_playable(color, row, col, row_expr, col_expr)):
-                                if (row, col) not in playable_spaces:
-                                    playable_spaces.append((row, col))
-                                # We only need to find at least one playable path. Break to reduce calculations.
-                                break
+        for x in range(self.BOARD_SIZE):
+            for y in range(self.BOARD_SIZE):
+                if self.scan_valid_place(x, y):
+                    playable_spaces.append((x, y))
         return playable_spaces
-
-    def flip_pieces(self, color: bool, row: int, col: int, row_expr: str, col_expr: str):
-        '''Recursive function that checks if pieces following a direction can be flipped, flips them if so, and updates the scores.'''
-
-        # Get adjacent piece.
-        adj_row = eval(f"{row}{row_expr}")
-        adj_col = eval(f"{col}{col_expr}")
-        piece = self.get_piece(adj_row, adj_col)
-
-        # If the piece is non-existent, we cannot flip. Return False.
-        if piece == None:
-            return False
-
-        # If the piece is the same color, we've determined that our pieces are flippable,
-        # and this one is already flipped. Return True.
-        elif piece == color:
-            return True
-
-        # If piece is the other color, perform the expressions against our row and column integer. Continue to check if we can flip.
-        elif piece != color:
-            flippable = self.flip_pieces(
-                color, adj_row, adj_col, row_expr, col_expr)
-
-            # If flippable, flip the piece, and update the scores by one point.
-            # If not flippable, do nothing.
-            if (flippable):
-                self.WHITE_BOARD[adj_row][adj_col] = not piece
-                self.SCORE[color] += 1
-                self.SCORE[not color] -= 1
-                return True
-            else:
-                return False
-
-    def place_piece(self, team, row, column):
-        # Place piece and increase score by one.
-        self.WHITE_BOARD[row][column] = team
-        self.SCORE[team] += 1
-
-        # Flip board pieces as necessary.
-        for row_rule in self.EXPRS:
-            for col_rule in self.EXPRS:
-                self.flip_pieces(
-                    team, row, column, row_rule, col_rule)
 
     def play(self):
         '''Othello game loop.'''
@@ -416,8 +315,8 @@ class Game:
                     f'Black - {self.SCORE[self.BLACK]}    White - {self.SCORE[self.WHITE]}')
                 return
 
-            # Scan for possible plays this color can make.
-            playable_spaces = self.get_playable_spaces(team)
+            # Get Playable Spaces
+            playable_spaces = self.get_playable_spaces()
 
             # If no spaces are available to play, skip their turn.
             if len(playable_spaces) == 0:
@@ -440,7 +339,7 @@ class Game:
                     print('Cannot place there.')
 
             # Place piece perform piece flipping.
-            self.place_piece(team, row, column)
+            self.flip_pieces(row, column)
             print(f"{player.color} plays at {(row + 1, column + 1)}.\n")
 
             # A successful turn has occurred. Reset skip counter.
@@ -452,13 +351,13 @@ class Game:
 
 # On Game Start User Picks A and B, They Then Game. If No Player is selected, the bots will play against each other.
 if __name__ == "__main__":
-    Player_A = 1  # input("Player A: (1) Bot, (2) Person")
+    Player_A = input("Player A: (1) Bot, (2) Person")
     if int(Player_A) == 1:
         Player_A = Bot("A", "White")
     else:
         Player_A = Player("A", "White")
 
-    Player_B = 1  # input("Player B: (1) Bot, (2) Person")
+    Player_B = input("Player B: (1) Bot, (2) Person")
     if int(Player_B) == 1:
         Player_B = Bot("B", "Black")
     else:
